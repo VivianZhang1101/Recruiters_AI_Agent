@@ -7,7 +7,7 @@ app = Flask(__name__)
 app.secret_key = "resume"
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
-# Load your API key from an environment variable or secure source
+# Replace api_key with your own OpenAI API key
 api_key = 'api_key'
 client = OpenAI(api_key=api_key)
 
@@ -24,13 +24,15 @@ def start_chat():
     1. Responsibilities
     2. Ideal candidate's experience and soft skills
     3. Company culture or team structure
+    4. Unclear or Missing Details 
     Example question: Can you elaborate on the specific types of AI features the candidate would be expected to implement?
     Limit the number of questions to 1 per section.
     Return the questions in JSON format:
     {{
         "Responsibilities": [],
         "Ideal Experience": [],
-        "Team Structure": []
+        "Team Structure": [],
+        "Unclear or Missing Details": []
     }}
     Job Description:
     {job_post}
@@ -56,8 +58,6 @@ def start_chat():
     session['questions'] = questions
     session['answers'] = []
     first_category = list(questions.keys())[0]
-    # return jsonify({'message': 'Chat started', 'questions': questions})
-    # return jsonify({'message': 'Chat started'})
     return jsonify({
         'message': 'Chat started',
         'next_category': first_category,
@@ -85,18 +85,18 @@ def ask_question():
         Here is the question: {current_question}. Given the recruiter's answer: "{answer}", determine if a follow-up question is appropriate.
 
         Consider the following guidelines:
-        1. If the answer suggests the recruiter has no more interest in elaborating (e.g., "just normal communication" or "it's standard"), return "None".
-        2. If the answer is vague or incomplete and clarification would add value, generate a follow-up question.
-        3. If the answer explicitly indicates they don’t know or don’t want to answer, return "None".
-        4. If the original question is already a follow-up, avoid trying too hard to generate another follow-up.
+        1. If the answer suggests the recruiter has no more interest in elaborating (e.g., "just normal communication", "it's standard", or "no specific"), return None.
+        2. If the answer explicitly or inexplicitly indicates they don’t know or don’t want to answer, return None.
+        3. If the original question is already a follow-up, avoid trying too hard to generate another follow-up.
+        4. If the answer is vague or incomplete and clarification would add value, return a follow-up question.
         5. Ensure the follow-up question is specific and meaningful, rather than generic or repetitive.
 
-        If a follow-up is needed, return the question as a string. If no follow-up is appropriate, return "None".
+        If a follow-up is needed, return the question as a string. If no follow-up is appropriate, return None.
         """
         follow_up_response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user",  "content": [{"type": "text", "text": follow_up_prompt}]}],
-            max_tokens=100
+            max_tokens=50
         )
         follow_up_question = follow_up_response.choices[0].message.content.strip()
         if follow_up_question and follow_up_question.lower() != "none":
@@ -120,12 +120,15 @@ def ask_question():
         else:
             return jsonify({'message': 'All questions answered'})
 def get_next_category(questions, current_category):
+    """
+    Return the next non-empty category. Return None if no category left.
+    """
     categories = list(questions.keys())
     current_index = categories.index(current_category) if current_category in categories else -1
     for i in range(current_index + 1, len(categories)):
-        if questions[categories[i]]:  # Return the next non-empty category
+        if questions[categories[i]]: 
             return categories[i]
-    return None  # No more categories with questions
+    return None 
 
 @app.route('/end_chat', methods=['GET'])
 def end_chat():
@@ -133,7 +136,7 @@ def end_chat():
     Generates a summary of answers and provides recommendations based on recruiter responses.
     """
     answers = session.get('answers', [])
-    print(f"Summary answer: {answers}")
+    # print(f"Summary answer: {answers}")
     job_post = session.get('job_post', '')
 
     if not answers:

@@ -34,13 +34,6 @@ def get_voice_input():
             audio = recognizer.listen(source, timeout=5)
             text = recognizer.recognize_google(audio)
             print(f"You said: {text}")
-            # text_to_speak(engine, f"You said: {text}")
-            # text_to_speak(engine, f"Is this correct?")
-            # confirmation = input("Is this correct? (yes/no): ").strip().lower()
-            # if confirmation in ["yes", "y"]:
-            #     return text
-            # else:
-            #     print("Let's try again.")
             return text
         except sr.UnknownValueError:
             print("Sorry, I couldn't understand that.")
@@ -70,6 +63,9 @@ def start_chat(mode, engine):
         return None, None
 
 def ask_question(mode, engine=None):
+    """
+    Loop through the questions list and ask the user to answer them.
+    """
     current_category, current_question = start_chat(mode, engine)
     if not current_category or not current_question:
         print("No questions available. Ending the session.")
@@ -88,18 +84,14 @@ def ask_question(mode, engine=None):
             text_to_speak(engine, f"Please tell me your answer")
             answer = get_voice_input()
         else:
-            answer = input("Your Answer (or type 'skip' to move on): ").strip()
-        # # Get user answer
-        # answer = input(f"Your Answer (or type 'skip' to move on): ").strip()
-        # if answer.lower() == 'skip':
-        #     answer = "Not applicable"
+            answer = input("Your Answer (or type 'skip' to move on if you don't want to answer this question): ").strip()
+        
         if not answer:
             print("No response detected. Skipping...")
             answer = "Not applicable"
         elif answer.lower() == 'skip':
             print("Skipped this question.")
             answer = "Not applicable"
-
 
         # Send the answer to the server
         payload = {
@@ -127,9 +119,7 @@ def ask_question(mode, engine=None):
                 if mode == 'voice':
                     text_to_speak(engine, "No more questions available. Ending the session.")
                 break
-            # if not current_category or not current_question:
-            #     print("No more questions available. Ending the session.")
-            #     break
+
         else:
             error_message = response.json().get('error', 'Unknown error')
             print("Error:", error_message)
